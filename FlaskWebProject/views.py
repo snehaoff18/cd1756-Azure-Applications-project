@@ -62,17 +62,27 @@ def post(id):
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
+
     form = LoginForm()
+
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
+
+        # ❌ FAILED LOGIN
         if user is None or not user.check_password(form.password.data):
+            app.logger.warning(f"Invalid login attempt for username: {form.username.data}")
             flash('Invalid username or password')
             return redirect(url_for('login'))
+
+        # ✅ SUCCESSFUL LOGIN
+        app.logger.info(f"{form.username.data} logged in successfully")
         login_user(user, remember=form.remember_me.data)
+
         next_page = request.args.get('next')
         if not next_page or urlparse(next_page).netloc != '':
             next_page = url_for('home')
         return redirect(next_page)
+
     session["state"] = str(uuid.uuid4())
     auth_url = _build_auth_url(scopes=Config.SCOPE, state=session["state"])
     return render_template('login.html', title='Sign In', form=form, auth_url=auth_url)
